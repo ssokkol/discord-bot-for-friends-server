@@ -1,0 +1,11 @@
+discord.py>=2.0.0
+Pillow
+requests
+python-dotenv
+aiosqlite
+aiohttp>=3.9.0
+
+# Music player dependencies
+yt-dlp>=2024.1.0
+spotipy>=2.23.0
+PyNaCl>=1.5.0

@@ -1,0 +1,99 @@
+# Environment variables (ВАЖНО: НЕ ПУБЛИКУЙТЕ .env файл!)
+.env
+.env.local
+.env.production
+.env.staging
+
+# Discord Bot Token (никогда не публикуйте!)
+token.txt
+config.json
+secrets.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+log/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+virtualenv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Docker
+.dockerignore
+*.env.prod
+docker-compose.override.yml
+
+# Temporary files
+*.tmp
+*.temp
+output_*.png
+temp/
+.cache/
+
+# Generated images
+output.png
+output_*.png
+generated_*.png
+profile_*.png
+
+# Backup files
+*.bak
+*.backup
+*.old
+*_backup/
+
+# User-specific files
+user_data/
+saved_states/

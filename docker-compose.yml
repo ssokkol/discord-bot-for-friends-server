@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./assets:/app/assets
+    env_file:
+      - .env
+    command: python main.py
+    restart: unless-stopped
