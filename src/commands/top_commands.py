@@ -13,21 +13,29 @@ class TopCommands(BaseCommand):
         super().__init__(bot)
         self.top_db = top_db
 
+    def _get_display_name(self, guild: discord.Guild, user_id: int) -> str:
+        """Get member display name without mentioning"""
+        member = guild.get_member(user_id)
+        return member.display_name if member else f"Пользователь {user_id}"
+
     async def show_voice_top(self, interaction: discord.Interaction, limit: int = 5) -> None:
         """Показывает топ по времени в голосовых каналах"""
         try:
             top_data = await self.top_db.get_voice_top(limit)
 
             if not top_data:
-                await interaction.response.send_message('Нет данных для отображения топа')
+                await interaction.response.send_message('Нет данных для отображения топа', ephemeral=True)
                 return
 
-            top_list = []
+            embed = discord.Embed(title="Топ по голосовому онлайну", color=discord.Color.blue())
+            lines = []
             for i, (user_id, voice_time) in enumerate(top_data, 1):
+                name = self._get_display_name(interaction.guild, user_id)
                 formatted_time = format_time(voice_time)
-                top_list.append(f'**{i}. <@{user_id}> время - `{formatted_time}`**\n')
+                lines.append(f"**{i}.** {name} — `{formatted_time}`")
 
-            await interaction.response.send_message(''.join(top_list))
+            embed.description = "\n".join(lines)
+            await interaction.response.send_message(embed=embed)
 
         except Exception as e:
             await interaction.response.send_message(f'Ошибка при получении топа: {e}', ephemeral=True)
@@ -38,14 +46,17 @@ class TopCommands(BaseCommand):
             top_data = await self.top_db.get_messages_top(limit)
 
             if not top_data:
-                await interaction.response.send_message('Нет данных для отображения топа')
+                await interaction.response.send_message('Нет данных для отображения топа', ephemeral=True)
                 return
 
-            top_list = []
+            embed = discord.Embed(title="Топ по сообщениям", color=discord.Color.green())
+            lines = []
             for i, (user_id, messages) in enumerate(top_data, 1):
-                top_list.append(f'**{i}. <@{user_id}> сообщений - `{messages}`**\n')
+                name = self._get_display_name(interaction.guild, user_id)
+                lines.append(f"**{i}.** {name} — `{messages}` сообщений")
 
-            await interaction.response.send_message(''.join(top_list))
+            embed.description = "\n".join(lines)
+            await interaction.response.send_message(embed=embed)
 
         except Exception as e:
             await interaction.response.send_message(f'Ошибка при получении топа: {e}', ephemeral=True)
@@ -56,15 +67,18 @@ class TopCommands(BaseCommand):
             top_data = await self.top_db.get_balance_top(limit)
 
             if not top_data:
-                await interaction.response.send_message('Нет данных для отображения топа')
+                await interaction.response.send_message('Нет данных для отображения топа', ephemeral=True)
                 return
 
-            top_list = []
+            embed = discord.Embed(title="Топ по балансу", color=discord.Color.gold())
+            lines = []
             for i, (user_id, money) in enumerate(top_data, 1):
+                name = self._get_display_name(interaction.guild, user_id)
                 formatted_money = format_money(money)
-                top_list.append(f'**{i}. <@{user_id}> баланс - `{formatted_money}руб`**\n')
+                lines.append(f"**{i}.** {name} — `{formatted_money} руб`")
 
-            await interaction.response.send_message(''.join(top_list))
+            embed.description = "\n".join(lines)
+            await interaction.response.send_message(embed=embed)
 
         except Exception as e:
             await interaction.response.send_message(f'Ошибка при получении топа: {e}', ephemeral=True)

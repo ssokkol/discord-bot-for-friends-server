@@ -59,6 +59,24 @@ MIGRATIONS = [
             game_name TEXT UNIQUE NOT NULL, twitch_game_id TEXT, added_by INTEGER
         );""",
     ],
+    # Migration 2: Seed initial shop items
+    [
+        # Roles
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('VIP', 'Эксклюзивная роль VIP', 'role', 5000, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('OG', 'Роль для настоящих OG', 'role', 10000, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Легенда', 'Легендарная роль сервера', 'role', 25000, NULL);",
+        # Backgrounds
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Неон', 'Неоновый фон профиля', 'background', 3000, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Закат', 'Фон с закатом', 'background', 3000, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Космос', 'Космический фон профиля', 'background', 5000, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Киберпанк', 'Киберпанк фон профиля', 'background', 7500, NULL);",
+        # Badges
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Огонь', 'Значок с огнём', 'badge', 1500, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Звезда', 'Звёздный значок', 'badge', 2000, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Корона', 'Королевский значок', 'badge', 5000, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Алмаз', 'Алмазный значок', 'badge', 10000, NULL);",
+        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Дракон', 'Значок дракона', 'badge', 15000, NULL);",
+    ],
 ]
 
 

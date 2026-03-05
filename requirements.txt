@@ -4,6 +4,7 @@ requests
 python-dotenv
 aiosqlite
 aiohttp>=3.9.0
+certifi
 
 # Music player dependencies
 yt-dlp>=2024.1.0
