@@ -13,7 +13,7 @@ class LoggingCommands(BaseCommand):
 
     async def set_log_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         """Set the logging channel"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 

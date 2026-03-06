@@ -5,7 +5,7 @@ import logging
 from .base_command import BaseCommand
 from ..database import UserDatabase
 from ..image_generator import ProfileImageGenerator
-from ..utils import format_money, format_time
+from ..utils import format_time
 from ..services.level_service import LevelService
 
 # Настройка логирования
@@ -24,14 +24,13 @@ class ProfileCommands(BaseCommand):
         if len(text) > max_length:
             return text[:max_length-3] + "..."
         return text
-    
+
     async def show_profile(self, interaction: discord.Interaction, user: discord.Member) -> None:
         """Показывает профиль пользователя"""
         await interaction.response.defer(ephemeral=False)
         try:
             # Получаем данные пользователя
             messages = await self.user_db.get_messages(user.id)
-            money = await self.user_db.get_money(user.id)
             voice_time = await self.user_db.get_voice_time(user.id)
 
             # Level data
@@ -39,34 +38,19 @@ class ProfileCommands(BaseCommand):
             xp_needed = LevelService.xp_for_level(level)
 
             # Форматируем данные
-            messages_formatted = format_money(messages)
+            messages_formatted = str(messages)
             messages_formatted = self.truncate_text(messages_formatted, 14)
-
-            money_formatted = format_money(money)
-            money_formatted = self.truncate_text(money_formatted, 19)
 
             voice_time_formatted = format_time(voice_time)
             voice_time_formatted = self.truncate_text(voice_time_formatted, 17)
-            
+
             # Даты
             created_date = user.created_at.strftime("%d.%m.%Y")
             joined_date = user.joined_at.strftime("%d.%m.%Y") if user.joined_at else "Неизвестно"
-            
+
             # Ник
             nickname = self.truncate_text(str(user.name), 12)
             member = interaction.guild.get_member(user.id)
-            # Check for custom background from shop
-            bg_id, _ = await self.bot.shop_db.get_equipment(user.id)
-            custom_bg = None
-            if bg_id:
-                item = await self.bot.shop_db.get_item(bg_id)
-                if item and item[5]:  # item_data
-                    import json
-                    try:
-                        data = json.loads(item[5])
-                        custom_bg = data.get('file')
-                    except Exception:
-                        pass
 
             # Подготавливаем данные для генерации изображения
             user_data = {
@@ -75,23 +59,21 @@ class ProfileCommands(BaseCommand):
                 'nickname': nickname,
                 'created_date': created_date,
                 'joined_date': joined_date,
-                'balance': money_formatted,
+                'level': level,
                 'messages': messages_formatted,
                 'voice_time': voice_time_formatted,
-                'level': level,
                 'xp': xp,
                 'xp_needed': xp_needed,
-                'custom_background': custom_bg,
             }
-            
+
             # Генерируем изображение профиля
             output_path = f'output_{user.id}.png'
             success = await self.image_generator.generate_profile_image(user_data, output_path)
-            
+
             if not success:
                 await interaction.response.send_message('Ошибка генерации изображения профиля', ephemeral=True)
                 return
-            
+
             # Добавляем значки
             await self.image_generator.add_badges_to_profile(output_path, [str(role.id) for role in user.roles])
 
@@ -111,4 +93,3 @@ class ProfileCommands(BaseCommand):
         except Exception as e:
             logger.error(f"Ошибка при получении профиля: {e}")
             await interaction.followup.send(f'Ошибка при получении профиля: {e}', ephemeral=True)
-

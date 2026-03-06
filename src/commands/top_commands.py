@@ -3,7 +3,7 @@ from discord.ext import commands
 from typing import List, Tuple
 from .base_command import BaseCommand
 from ..database import TopDatabase
-from ..utils import format_time, format_money
+from ..utils import format_time
 
 
 class TopCommands(BaseCommand):
@@ -61,21 +61,20 @@ class TopCommands(BaseCommand):
         except Exception as e:
             await interaction.response.send_message(f'Ошибка при получении топа: {e}', ephemeral=True)
 
-    async def show_balance_top(self, interaction: discord.Interaction, limit: int = 5) -> None:
-        """Показывает топ по балансу"""
+    async def show_level_top(self, interaction: discord.Interaction, limit: int = 5) -> None:
+        """Показывает топ по уровням"""
         try:
-            top_data = await self.top_db.get_balance_top(limit)
+            top_data = await self.top_db.get_level_top(limit)
 
             if not top_data:
                 await interaction.response.send_message('Нет данных для отображения топа', ephemeral=True)
                 return
 
-            embed = discord.Embed(title="Топ по балансу", color=discord.Color.gold())
+            embed = discord.Embed(title="Топ по уровням", color=discord.Color.gold())
             lines = []
-            for i, (user_id, money) in enumerate(top_data, 1):
+            for i, (user_id, level, xp) in enumerate(top_data, 1):
                 name = self._get_display_name(interaction.guild, user_id)
-                formatted_money = format_money(money)
-                lines.append(f"**{i}.** {name} — `{formatted_money} руб`")
+                lines.append(f"**{i}.** {name} — Уровень `{level}` ({xp} XP)")
 
             embed.description = "\n".join(lines)
             await interaction.response.send_message(embed=embed)
@@ -90,11 +89,10 @@ class TopCommands(BaseCommand):
                 await self.show_voice_top(interaction, limit)
             elif top_type == "messages":
                 await self.show_messages_top(interaction, limit)
-            elif top_type == "balance":
-                await self.show_balance_top(interaction, limit)
+            elif top_type == "level":
+                await self.show_level_top(interaction, limit)
             else:
-                await interaction.response.send_message('Неизвестный тип топа. Доступные: voice, messages, balance', ephemeral=True)
+                await interaction.response.send_message('Неизвестный тип топа. Доступные: voice, messages, level', ephemeral=True)
 
         except Exception as e:
             await interaction.response.send_message(f'Ошибка при получении топа: {e}', ephemeral=True)
-

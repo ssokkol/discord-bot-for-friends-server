@@ -1,24 +1,6 @@
-import locale
 import logging
 
 logger = logging.getLogger(__name__)
-
-# Try to set Russian locale once at module level
-try:
-    locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
-except Exception:
-    try:
-        locale.setlocale(locale.LC_ALL, 'Russian_Russia.1251')
-    except Exception:
-        logger.warning("Could not set Russian locale")
-
-
-def format_money(amount: int) -> str:
-    """Formats money amount with grouping separators"""
-    try:
-        return locale.format_string('%d', amount, grouping=True)
-    except Exception:
-        return str(amount)
 
 
 def _day_word(days: int) -> str:

@@ -75,13 +75,14 @@ class ProfileImageGenerator:
             draw = ImageDraw.Draw(img)
             x, y = position
             w, h = size
-            radius = h // 2
+            radius = 8
+            bg_color = (0x19, 0x1A, 0x1C)
 
             # Background (dark rounded rect)
             draw.rounded_rectangle(
                 [x, y, x + w, y + h],
                 radius=radius,
-                fill=(40, 40, 40, 200)
+                fill=bg_color
             )
 
             # Progress fill
@@ -89,40 +90,44 @@ class ProfileImageGenerator:
             fill_width = max(int(w * progress), radius * 2) if progress > 0 else 0
 
             if fill_width > 0:
-                # Gradient from blue to purple
+                # Gradient from #9802BD to #BA4FD4
+                gradient = Image.new('RGBA', (fill_width, h), (0, 0, 0, 0))
+                gradient_draw = ImageDraw.Draw(gradient)
                 for i in range(fill_width):
-                    ratio = i / max(w, 1)
-                    r = int(66 + (155 - 66) * ratio)
-                    g = int(133 + (89 - 133) * ratio)
-                    b = int(244 + (182 - 244) * ratio)
-                    draw.line([(x + i, y + 1), (x + i, y + h - 1)], fill=(r, g, b))
+                    ratio = i / max(fill_width - 1, 1)
+                    r = int(0x98 + (0xBA - 0x98) * ratio)
+                    g = int(0x02 + (0x4F - 0x02) * ratio)
+                    b = int(0xBD + (0xD4 - 0xBD) * ratio)
+                    gradient_draw.line([(i, 0), (i, h - 1)], fill=(r, g, b))
 
-                # Re-draw rounded corners by masking
-                mask = Image.new('L', img.size, 255)
+                # Mask to clip gradient within rounded rect
+                mask = Image.new('L', (w, h), 0)
                 mask_draw = ImageDraw.Draw(mask)
-                mask_draw.rounded_rectangle(
-                    [x, y, x + w, y + h],
-                    radius=radius,
-                    fill=255
-                )
-                # Apply mask to clip the gradient within rounded rect
-                # (simplified - just overdraw the outer area)
-                draw.rounded_rectangle(
-                    [x + fill_width, y, x + w, y + h],
-                    radius=radius,
-                    fill=(40, 40, 40, 200)
-                )
+                mask_draw.rounded_rectangle([0, 0, w - 1, h - 1], radius=radius, fill=255)
+                # Crop mask to fill_width
+                fill_mask = mask.crop((0, 0, fill_width, h))
+                img.paste(gradient, (x, y), fill_mask)
 
-            # Level text
-            font = ImageFont.truetype(self.font_path, 24)
+            # Scale font to bar height
+            font_size = max(16, h * 2 // 3)
+            font = ImageFont.truetype(self.font_path, font_size)
+
+            # Vertically center text using actual text height
             level_text = f"LVL {level}"
-            draw.text((x + 5, y + 2), level_text, font=font, fill=(255, 255, 255))
+            lvl_bbox = draw.textbbox((0, 0), level_text, font=font)
+            text_height = lvl_bbox[3] - lvl_bbox[1]
+            text_y = y + (h - text_height) // 2 - lvl_bbox[1]
 
-            # XP text (right-aligned)
+            padding = 21
+
+            # Level text (left)
+            draw.text((x + padding, text_y), level_text, font=font, fill=(255, 255, 255))
+
+            # XP text (right, same padding as left)
             xp_text = f"{xp}/{xp_needed} XP"
-            bbox = draw.textbbox((0, 0), xp_text, font=font)
-            text_width = bbox[2] - bbox[0]
-            draw.text((x + w - text_width - 5, y + 2), xp_text, font=font, fill=(255, 255, 255))
+            xp_bbox = draw.textbbox((0, 0), xp_text, font=font)
+            xp_width = xp_bbox[2] - xp_bbox[0]
+            draw.text((x + w - xp_width - padding, text_y), xp_text, font=font, fill=(255, 255, 255))
 
         except Exception as e:
             logger.error(f"Error drawing XP bar: {e}")
@@ -176,10 +181,12 @@ class ProfileImageGenerator:
             dates = self.truncate_text(dates, 21)
             img = self.add_text_to_image(img, dates, (135, 448), 40)
 
-            # Balance
-            balance = f"{user_data.get('balance', 0)} руб"
-            balance = self.truncate_text(balance, 26)
-            img = self.add_text_to_image(img, balance, (91, 667), 64)
+            # Level progress bar (in the first stat slot where balance was)
+            level = user_data.get('level', 0)
+            xp = user_data.get('xp', 0)
+            xp_needed = user_data.get('xp_needed', 100)
+            self._draw_xp_bar(img, xp, xp_needed, level,
+                              position=(70, 662), size=(1000, 100))
 
             # Messages
             messages = f"{user_data.get('messages', 0)} сообщений"
@@ -190,12 +197,6 @@ class ProfileImageGenerator:
             voice_time = f"{user_data.get('voice_time', '0:00:00')} в войсе"
             voice_time = self.truncate_text(voice_time, 28)
             img = self.add_text_to_image(img, voice_time, (91, 918), 64)
-
-            # Level/XP bar
-            level = user_data.get('level', 0)
-            xp = user_data.get('xp', 0)
-            xp_needed = user_data.get('xp_needed', 100)
-            self._draw_xp_bar(img, xp, xp_needed, level)
 
             img.save(output_path, optimize=True, quality=95)
             return True

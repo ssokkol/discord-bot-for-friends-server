@@ -10,12 +10,10 @@ import os
 from src.config import Config
 from src.database import (
     DatabaseManager, UserDatabase, TopDatabase,
-    LevelDatabase, SettingsDatabase, ShopDatabase,
-    TransactionDatabase, TwitchDatabase
+    LevelDatabase, SettingsDatabase, TwitchDatabase
 )
 from src.image_generator import ProfileImageGenerator
 from src.commands.admin_commands import AdminCommands
-from src.commands.economy_commands import EconomyCommands
 from src.commands.top_commands import TopCommands
 from src.commands.profile_commands import ProfileCommands
 from src.commands.global_commands import GlobalCommands
@@ -23,12 +21,11 @@ from src.commands.voice_commands import VoiceCommands
 from src.commands.music_commands import MusicCommands
 from src.commands.verify_commands import VerifyCommands
 from src.commands.level_commands import LevelCommands
-from src.commands.daily_commands import DailyCommands
-from src.commands.games_commands import GamesCommands
-from src.commands.shop_commands import ShopCommands
 from src.commands.twitch_commands import TwitchCommands
 from src.commands.drops_commands import DropsCommands
 from src.commands.logging_commands import LoggingCommands
+from src.commands.suggest_commands import SuggestCommands
+from src.commands.rules_commands import RulesCommands
 from src.services.level_service import LevelService
 from src.services.twitch_service import TwitchService
 from src.services.logging_service import LoggingService
@@ -75,8 +72,6 @@ class DiscordBot(commands.Bot):
         self.top_db = TopDatabase(self.db_manager)
         self.level_db = LevelDatabase(self.db_manager)
         self.settings_db = SettingsDatabase(self.db_manager)
-        self.shop_db = ShopDatabase(self.db_manager)
-        self.transaction_db = TransactionDatabase(self.db_manager)
         self.twitch_db = TwitchDatabase(self.db_manager)
 
         # Image generator
@@ -92,19 +87,17 @@ class DiscordBot(commands.Bot):
 
         # Commands
         self.admin_commands = AdminCommands(self, self.user_db)
-        self.economy_commands = EconomyCommands(self, self.user_db)
         self.top_commands = TopCommands(self, self.top_db)
         self.profile_commands = ProfileCommands(self, self.user_db)
         self.voice_commands = VoiceCommands(self)
         self.music_commands = MusicCommands(self)
         self.verify_commands = VerifyCommands(self)
         self.level_commands = LevelCommands(self)
-        self.daily_commands = DailyCommands(self)
-        self.games_commands = GamesCommands(self)
-        self.shop_commands = ShopCommands(self)
         self.twitch_commands_handler = TwitchCommands(self)
         self.drops_commands = DropsCommands(self)
         self.logging_commands = LoggingCommands(self)
+        self.suggest_commands = SuggestCommands(self)
+        self.rules_commands = RulesCommands(self)
 
         # Events & commands
         self.setup_events()
@@ -152,8 +145,15 @@ class DiscordBot(commands.Bot):
             except Exception as e:
                 logger.error(f"Command sync error: {e}")
 
+            activity_types = {
+                'playing': discord.ActivityType.playing,
+                'listening': discord.ActivityType.listening,
+                'watching': discord.ActivityType.watching,
+                'competing': discord.ActivityType.competing,
+            }
+            activity_type = activity_types.get(self.config.BOT_ACTIVITY_TYPE, discord.ActivityType.listening)
             activity = discord.Activity(
-                type=discord.ActivityType.listening,
+                type=activity_type,
                 name=self.config.BOT_ACTIVITY_NAME
             )
             await self.change_presence(
@@ -272,14 +272,6 @@ class DiscordBot(commands.Bot):
 
                             if not member.voice.self_mute:
                                 await self.user_db.add_voice_time(member.id, self.config.VOICE_TIME_REWARD)
-                                await self.user_db.add_money(member.id, self.config.VOICE_MONEY_REWARD)
-
-                                new_balance = await self.user_db.get_money(member.id)
-                                await self.transaction_db.log(
-                                    member.id, 'voice_reward',
-                                    self.config.VOICE_MONEY_REWARD,
-                                    new_balance
-                                )
 
                                 new_level, leveled_up = await self.level_service.add_voice_xp(member.id)
                                 if leveled_up:
@@ -465,40 +457,7 @@ class DiscordBot(commands.Bot):
 
         @self.tree.command(name="help", description="Список команд", guild=guild_obj)
         async def help(interaction: discord.Interaction):
-            help_text = (
-                '/profile - Ваша статистика на сервере\n'
-                '/rank - Уровень и XP\n'
-                '/daily - Ежедневный бонус\n\n'
-                '**Банковские операции**\n'
-                '/transfer - перевести деньги пользователю (комиссия 10%)\n\n'
-                '**Игры**\n'
-                '/coinflip - подбросить монетку (x1.8)\n'
-                '/dice - кости (x2)\n'
-                '/duel - дуэль с игроком\n\n'
-                '**Магазин**\n'
-                '/shop - магазин предметов\n'
-                '/buy - купить предмет\n'
-                '/inventory - инвентарь\n'
-                '/equip - экипировать предмет\n\n'
-                '**Топ участников**\n'
-                '/voice - топ по времени в войсе\n'
-                '/messages - топ по сообщениям\n'
-                '/balance - топ по балансу\n'
-                '/leaderboard - топ по уровням\n\n'
-                '**Музыка**\n'
-                '/play - воспроизвести трек\n'
-                '/skip - пропустить трек\n'
-                '/queue - очередь воспроизведения\n'
-                '/stop - остановить\n'
-                '/pause - пауза/возобновление\n\n'
-                '**Административные команды**\n'
-                '/ban - забанить\n'
-                '/kick - кикнуть\n'
-                '/mute - замутить\n'
-                '/give - выдать деньги\n'
-                '/rem - снять деньги'
-            )
-            await interaction.response.send_message(help_text, ephemeral=True)
+            await self.global_commands.help.callback(self.global_commands, interaction)
 
         @self.tree.command(name="profile", description="Ваш профиль и статистика", guild=guild_obj)
         async def profile(interaction: discord.Interaction, user: discord.Member = None):
@@ -519,29 +478,6 @@ class DiscordBot(commands.Bot):
         async def mute(interaction: discord.Interaction, user: discord.Member, reason: str, time: int):
             await self.admin_commands.mute_user(interaction, user, reason, time)
 
-        @self.tree.command(name="give", description="Выдать деньги пользователю (только для админа)", guild=guild_obj)
-        async def give(interaction: discord.Interaction, user: discord.Member, amount: int):
-            await self.admin_commands.give_money(interaction, user, amount)
-
-        @self.tree.command(name="rem", description="Снять деньги у пользователя (только для админа)", guild=guild_obj)
-        async def rem(interaction: discord.Interaction, user: discord.Member, amount: int):
-            await self.admin_commands.remove_money(interaction, user, amount)
-
-        @self.tree.command(name="economy_reset", description="Сбросить баланс пользователя", guild=guild_obj)
-        async def economy_reset(interaction: discord.Interaction, user: discord.Member):
-            if not self.admin_commands.has_admin_role(interaction.user):
-                await interaction.response.send_message('No permission', ephemeral=True)
-                return
-            await self.user_db.reset_money(user.id)
-            new_balance = await self.user_db.get_money(user.id)
-            await self.transaction_db.log(user.id, 'admin_rem', 0, new_balance, f'reset by {interaction.user.id}')
-            await interaction.response.send_message(f'Balance reset for {user.mention}', ephemeral=True)
-
-        # Economy commands
-        @self.tree.command(name="transfer", description="Перевести деньги пользователю (комиссия 10%)", guild=guild_obj)
-        async def transfer(interaction: discord.Interaction, user: discord.Member, amount: int):
-            await self.economy_commands.transfer_money(interaction, user, amount)
-
         # Top commands
         @self.tree.command(name="voice", description="Топ по времени в голосовых каналах", guild=guild_obj)
         async def voice(interaction: discord.Interaction):
@@ -551,9 +487,9 @@ class DiscordBot(commands.Bot):
         async def messages(interaction: discord.Interaction):
             await self.top_commands.show_messages_top(interaction)
 
-        @self.tree.command(name="balance", description="Топ по балансу", guild=guild_obj)
-        async def balance(interaction: discord.Interaction):
-            await self.top_commands.show_balance_top(interaction)
+        @self.tree.command(name="level", description="Топ по уровням", guild=guild_obj)
+        async def level(interaction: discord.Interaction):
+            await self.top_commands.show_level_top(interaction)
 
         # Level commands
         @self.tree.command(name="rank", description="Уровень и XP", guild=guild_obj)
@@ -563,62 +499,6 @@ class DiscordBot(commands.Bot):
         @self.tree.command(name="leaderboard", description="Топ по уровням", guild=guild_obj)
         async def leaderboard(interaction: discord.Interaction, page: int = 1):
             await self.level_commands.show_leaderboard(interaction, page)
-
-        # Daily
-        @self.tree.command(name="daily", description="Ежедневный бонус", guild=guild_obj)
-        async def daily(interaction: discord.Interaction):
-            await self.daily_commands.claim_daily(interaction)
-
-        # Games
-        @self.tree.command(name="coinflip", description="Подбросить монетку (выигрыш x1.8)", guild=guild_obj)
-        @app_commands.describe(amount="Сумма ставки")
-        async def coinflip(interaction: discord.Interaction, amount: int):
-            await self.games_commands.coinflip(interaction, amount)
-
-        @self.tree.command(name="dice", description="Кости - ваш бросок против бота (выигрыш x2)", guild=guild_obj)
-        @app_commands.describe(amount="Сумма ставки")
-        async def dice(interaction: discord.Interaction, amount: int):
-            await self.games_commands.dice(interaction, amount)
-
-        @self.tree.command(name="duel", description="Дуэль с другим игроком", guild=guild_obj)
-        @app_commands.describe(user="Противник", amount="Сумма ставки")
-        async def duel(interaction: discord.Interaction, user: discord.Member, amount: int):
-            await self.games_commands.duel(interaction, user, amount)
-
-        # Shop
-        @self.tree.command(name="shop", description="Магазин предметов", guild=guild_obj)
-        async def shop(interaction: discord.Interaction):
-            await self.shop_commands.show_shop(interaction)
-
-        @self.tree.command(name="buy", description="Купить предмет из магазина", guild=guild_obj)
-        @app_commands.describe(item_id="ID предмета")
-        async def buy(interaction: discord.Interaction, item_id: int):
-            await self.shop_commands.buy_item(interaction, item_id)
-
-        @self.tree.command(name="inventory", description="Ваш инвентарь", guild=guild_obj)
-        async def inventory(interaction: discord.Interaction):
-            await self.shop_commands.show_inventory(interaction)
-
-        @self.tree.command(name="equip", description="Экипировать предмет", guild=guild_obj)
-        @app_commands.describe(item_id="ID предмета")
-        async def equip(interaction: discord.Interaction, item_id: int):
-            await self.shop_commands.equip_item(interaction, item_id)
-
-        @self.tree.command(name="shop_add", description="Добавить предмет в магазин (админ)", guild=guild_obj)
-        @app_commands.describe(category="Категория (role/background/badge)", name="Название", price="Цена", description="Описание", data="JSON данные")
-        async def shop_add(interaction: discord.Interaction, category: str, name: str, price: int,
-                           description: str = None, data: str = None):
-            await self.shop_commands.admin_add_item(interaction, category, name, price, description, data)
-
-        @self.tree.command(name="shop_remove", description="Удалить предмет из магазина (админ)", guild=guild_obj)
-        @app_commands.describe(item_id="ID предмета")
-        async def shop_remove(interaction: discord.Interaction, item_id: int):
-            await self.shop_commands.admin_remove_item(interaction, item_id)
-
-        @self.tree.command(name="shop_edit", description="Редактировать предмет магазина (админ)", guild=guild_obj)
-        @app_commands.describe(item_id="ID предмета", field="Поле (name/description/price/item_data/category)", value="Новое значение")
-        async def shop_edit(interaction: discord.Interaction, item_id: int, field: str, value: str):
-            await self.shop_commands.admin_edit_item(interaction, item_id, field, value)
 
         # Verify
         @self.tree.command(name="verify_setup", description="Настроить верификацию (админ)", guild=guild_obj)
@@ -674,6 +554,18 @@ class DiscordBot(commands.Bot):
         async def drops_channel(interaction: discord.Interaction, channel: discord.TextChannel):
             await self.drops_commands.set_channel(interaction, channel)
 
+        # Rules
+        @self.tree.command(name="send_rules", description="Отправить правила сервера (админ)", guild=guild_obj)
+        async def send_rules(interaction: discord.Interaction):
+            await self.rules_commands.send_rules(interaction)
+
+        # Suggest
+        @self.tree.command(name="suggest_setup", description="Настроить систему предложений (админ)", guild=guild_obj)
+        @app_commands.describe(channel="Канал для предложений", title="Заголовок сообщения", description="Описание сообщения")
+        async def suggest_setup(interaction: discord.Interaction, channel: discord.TextChannel,
+                                title: str = None, description: str = None):
+            await self.suggest_commands.setup_suggest(interaction, channel, title, description)
+
         # Logging
         @self.tree.command(name="logs", description="Установить канал для логов (админ)", guild=guild_obj)
         @app_commands.describe(channel="Текстовый канал")
@@ -716,7 +608,6 @@ class DiscordBot(commands.Bot):
             if not await self.user_db.user_exists(message.author.id):
                 await self.user_db.add_user(message.author.id)
                 await self.user_db.add_message(message.author.id, self.config.INITIAL_MESSAGES)
-                await self.user_db.add_money(message.author.id, self.config.INITIAL_MONEY)
             else:
                 await self.user_db.add_message(message.author.id, 1)
         except Exception as e:

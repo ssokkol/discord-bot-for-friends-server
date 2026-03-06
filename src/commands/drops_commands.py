@@ -13,7 +13,7 @@ class DropsCommands(BaseCommand):
 
     async def add_game(self, interaction: discord.Interaction, game_name: str):
         """Add a game for drops tracking"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 
@@ -22,7 +22,7 @@ class DropsCommands(BaseCommand):
 
     async def remove_game(self, interaction: discord.Interaction, game_name: str):
         """Remove a game from drops tracking"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 
@@ -31,7 +31,7 @@ class DropsCommands(BaseCommand):
 
     async def set_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         """Set the drops alert channel"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 

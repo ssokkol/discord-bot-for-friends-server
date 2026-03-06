@@ -22,23 +22,17 @@ class Config:
         role_hierarchy_str = os.getenv('ROLE_HIERARCHY', '')
         self.ROLE_HIERARCHY = [int(r) for r in role_hierarchy_str.split(',') if r.strip()]
 
-        # Economy
-        self.TRANSFER_COMMISSION_RATE = float(os.getenv('TRANSFER_COMMISSION_RATE', 0.1))
-        self.INITIAL_MONEY = int(os.getenv('INITIAL_MONEY', 10))
         self.INITIAL_MESSAGES = int(os.getenv('INITIAL_MESSAGES', 1))
-
-        # Roles
-        self.BADGE_ROLES = [int(role_id) for role_id in os.getenv('BADGE_ROLES', '').split(',') if role_id]
 
         # Database
         self.DATABASE_PATH = os.getenv('DATABASE_PATH', 'club.db')
 
         # Bot activity
+        self.BOT_ACTIVITY_TYPE = os.getenv('BOT_ACTIVITY_TYPE', 'listening').lower()
         self.BOT_ACTIVITY_NAME = os.getenv('BOT_ACTIVITY_NAME', 'Playing')
 
-        # Voice rewards
+        # Voice
         self.VOICE_TIME_REWARD = int(os.getenv('VOICE_TIME_REWARD', 1))
-        self.VOICE_MONEY_REWARD = int(os.getenv('VOICE_MONEY_REWARD', 20))
         self.VOICE_CHECK_INTERVAL = int(os.getenv('VOICE_CHECK_INTERVAL', 1))
 
         # Dynamic voice channels
@@ -63,14 +57,6 @@ class Config:
         self.XP_MESSAGE_MAX = int(os.getenv('XP_MESSAGE_MAX', 25))
         self.XP_MESSAGE_COOLDOWN = int(os.getenv('XP_MESSAGE_COOLDOWN', 60))
         self.XP_VOICE_PER_MINUTE = int(os.getenv('XP_VOICE_PER_MINUTE', 10))
-
-        # Daily bonus
-        self.DAILY_MIN = int(os.getenv('DAILY_MIN', 100))
-        self.DAILY_MAX = int(os.getenv('DAILY_MAX', 300))
-
-        # Games
-        self.GAME_COOLDOWN = int(os.getenv('GAME_COOLDOWN', 5))
-        self.GAME_MIN_BET = int(os.getenv('GAME_MIN_BET', 50))
 
         # Twitch
         self.TWITCH_CLIENT_ID = os.getenv('TWITCH_CLIENT_ID', '')

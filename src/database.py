@@ -1,8 +1,6 @@
 import aiosqlite
 import asyncio
-import json
 from typing import Optional, Tuple, List
-from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -59,24 +57,8 @@ MIGRATIONS = [
             game_name TEXT UNIQUE NOT NULL, twitch_game_id TEXT, added_by INTEGER
         );""",
     ],
-    # Migration 2: Seed initial shop items
-    [
-        # Roles
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('VIP', 'Эксклюзивная роль VIP', 'role', 5000, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('OG', 'Роль для настоящих OG', 'role', 10000, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Легенда', 'Легендарная роль сервера', 'role', 25000, NULL);",
-        # Backgrounds
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Неон', 'Неоновый фон профиля', 'background', 3000, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Закат', 'Фон с закатом', 'background', 3000, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Космос', 'Космический фон профиля', 'background', 5000, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Киберпанк', 'Киберпанк фон профиля', 'background', 7500, NULL);",
-        # Badges
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Огонь', 'Значок с огнём', 'badge', 1500, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Звезда', 'Звёздный значок', 'badge', 2000, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Корона', 'Королевский значок', 'badge', 5000, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Алмаз', 'Алмазный значок', 'badge', 10000, NULL);",
-        "INSERT OR IGNORE INTO shop_items (name, description, category, price, item_data) VALUES ('Дракон', 'Значок дракона', 'badge', 15000, NULL);",
-    ],
+    # Migration 2: (removed - was shop seed items, kept as empty for schema_version compat)
+    [],
 ]
 
 
@@ -252,48 +234,6 @@ class UserDatabase:
             logger.error(f"Error adding user: {e}")
             return False
 
-    async def get_money(self, user_id: int) -> int:
-        result = await self.db.fetch_one(
-            "SELECT `money` FROM `users` WHERE `user_id` = ?",
-            (user_id,)
-        )
-        return result[0] if result else 0
-
-    async def add_money(self, user_id: int, amount: int) -> bool:
-        try:
-            await self.db.execute_query(
-                'UPDATE `users` SET `money` = money + ? WHERE user_id = ?',
-                (amount, user_id)
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Error adding money: {e}")
-            return False
-
-    async def rem_money(self, user_id: int, amount: int) -> bool:
-        """Remove money from user, preventing negative balance"""
-        try:
-            await self.db.execute_query(
-                'UPDATE `users` SET `money` = MAX(0, money - ?) WHERE user_id = ?',
-                (amount, user_id)
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Error removing money: {e}")
-            return False
-
-    async def reset_money(self, user_id: int) -> bool:
-        """Reset user's balance to 0"""
-        try:
-            await self.db.execute_query(
-                'UPDATE `users` SET `money` = 0 WHERE user_id = ?',
-                (user_id,)
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Error resetting money: {e}")
-            return False
-
     async def get_messages(self, user_id: int) -> int:
         result = await self.db.fetch_one(
             "SELECT `messages` FROM `users` WHERE `user_id` = ?",
@@ -346,12 +286,6 @@ class TopDatabase:
     async def get_messages_top(self, limit: int = 5) -> List[Tuple[int, int]]:
         return await self.db.fetch_all(
             "SELECT user_id, messages FROM users ORDER BY messages DESC LIMIT ?",
-            (limit,)
-        )
-
-    async def get_balance_top(self, limit: int = 5) -> List[Tuple[int, int]]:
-        return await self.db.fetch_all(
-            "SELECT user_id, money FROM users ORDER BY money DESC LIMIT ?",
             (limit,)
         )
 
@@ -454,119 +388,6 @@ class SettingsDatabase:
     async def get_all(self) -> dict:
         rows = await self.db.fetch_all("SELECT key, value FROM bot_settings")
         return {k: v for k, v in rows}
-
-
-class ShopDatabase:
-    """Shop database operations"""
-
-    def __init__(self, db_manager: DatabaseManager):
-        self.db = db_manager
-
-    async def add_item(self, name: str, description: str, category: str, price: int, item_data: str = None) -> bool:
-        return await self.db.execute_query(
-            "INSERT INTO shop_items (name, description, category, price, item_data) VALUES (?, ?, ?, ?, ?)",
-            (name, description, category, price, item_data)
-        )
-
-    async def remove_item(self, item_id: int) -> bool:
-        return await self.db.execute_query(
-            "UPDATE shop_items SET is_active = 0 WHERE id = ?",
-            (item_id,)
-        )
-
-    async def get_items(self, category: str = None) -> List[tuple]:
-        if category:
-            return await self.db.fetch_all(
-                "SELECT id, name, description, category, price, item_data FROM shop_items WHERE is_active = 1 AND category = ? ORDER BY price",
-                (category,)
-            )
-        return await self.db.fetch_all(
-            "SELECT id, name, description, category, price, item_data FROM shop_items WHERE is_active = 1 ORDER BY category, price"
-        )
-
-    async def get_item(self, item_id: int) -> Optional[tuple]:
-        return await self.db.fetch_one(
-            "SELECT id, name, description, category, price, item_data FROM shop_items WHERE id = ? AND is_active = 1",
-            (item_id,)
-        )
-
-    async def update_item(self, item_id: int, field: str, value: str) -> bool:
-        allowed_fields = {'name', 'description', 'price', 'item_data', 'category'}
-        if field not in allowed_fields:
-            return False
-        return await self.db.execute_query(
-            f"UPDATE shop_items SET {field} = ? WHERE id = ?",
-            (value, item_id)
-        )
-
-    async def add_to_inventory(self, user_id: int, item_id: int) -> bool:
-        return await self.db.execute_query(
-            "INSERT INTO user_inventory (user_id, item_id) VALUES (?, ?)",
-            (user_id, item_id)
-        )
-
-    async def get_inventory(self, user_id: int) -> List[tuple]:
-        return await self.db.fetch_all(
-            "SELECT ui.id, si.name, si.description, si.category, si.item_data "
-            "FROM user_inventory ui JOIN shop_items si ON ui.item_id = si.id "
-            "WHERE ui.user_id = ? ORDER BY ui.purchased_at DESC",
-            (user_id,)
-        )
-
-    async def owns_item(self, user_id: int, item_id: int) -> bool:
-        result = await self.db.fetch_one(
-            "SELECT id FROM user_inventory WHERE user_id = ? AND item_id = ?",
-            (user_id, item_id)
-        )
-        return bool(result)
-
-    async def get_equipment(self, user_id: int) -> Tuple[Optional[int], Optional[int]]:
-        """Returns (background_id, badge_id)"""
-        result = await self.db.fetch_one(
-            "SELECT background_id, badge_id FROM user_equipment WHERE user_id = ?",
-            (user_id,)
-        )
-        if result:
-            return result[0], result[1]
-        return None, None
-
-    async def equip_item(self, user_id: int, category: str, item_id: int) -> bool:
-        # Ensure row exists
-        await self.db.execute_query(
-            "INSERT OR IGNORE INTO user_equipment (user_id) VALUES (?)",
-            (user_id,)
-        )
-        if category == 'background':
-            return await self.db.execute_query(
-                "UPDATE user_equipment SET background_id = ? WHERE user_id = ?",
-                (item_id, user_id)
-            )
-        elif category == 'badge':
-            return await self.db.execute_query(
-                "UPDATE user_equipment SET badge_id = ? WHERE user_id = ?",
-                (item_id, user_id)
-            )
-        return False
-
-
-class TransactionDatabase:
-    """Transaction log database operations"""
-
-    def __init__(self, db_manager: DatabaseManager):
-        self.db = db_manager
-
-    async def log(self, user_id: int, tx_type: str, amount: int, balance_after: int, details: str = None) -> bool:
-        return await self.db.execute_query(
-            "INSERT INTO transactions (user_id, type, amount, balance_after, details) VALUES (?, ?, ?, ?, ?)",
-            (user_id, tx_type, amount, balance_after, details)
-        )
-
-    async def get_history(self, user_id: int, limit: int = 10) -> List[tuple]:
-        return await self.db.fetch_all(
-            "SELECT type, amount, balance_after, details, created_at FROM transactions "
-            "WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
-            (user_id, limit)
-        )
 
 
 class TwitchDatabase:

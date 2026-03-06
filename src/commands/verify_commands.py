@@ -15,7 +15,7 @@ class VerifyCommands(BaseCommand):
     async def setup_verify(self, interaction: discord.Interaction, title: str, description: str,
                            color: str, image_url: str, emoji: str, role: discord.Role):
         """Setup a verification message"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 
@@ -59,7 +59,7 @@ class VerifyCommands(BaseCommand):
     async def edit_verify(self, interaction: discord.Interaction, title: str = None,
                           description: str = None, color: str = None, image_url: str = None):
         """Edit existing verification message"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 

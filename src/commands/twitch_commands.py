@@ -13,7 +13,7 @@ class TwitchCommands(BaseCommand):
 
     async def add_streamer(self, interaction: discord.Interaction, username: str):
         """Add a Twitch streamer to track"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 
@@ -34,7 +34,7 @@ class TwitchCommands(BaseCommand):
 
     async def remove_streamer(self, interaction: discord.Interaction, username: str):
         """Remove a tracked streamer"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 
@@ -60,7 +60,7 @@ class TwitchCommands(BaseCommand):
 
     async def set_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         """Set the Twitch alerts channel"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 
@@ -69,7 +69,7 @@ class TwitchCommands(BaseCommand):
 
     async def set_ping_role(self, interaction: discord.Interaction, role: discord.Role):
         """Set the role to ping for stream alerts"""
-        if not self.is_admin(interaction.user):
+        if not self.is_owner(interaction.user):
             await interaction.response.send_message('Нет прав', ephemeral=True)
             return
 

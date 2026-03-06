@@ -31,29 +31,17 @@ class GlobalCommands(app_commands.Group):
             name="Общие команды",
             value="* `/help` - Показать список команд\n"
                   "* `/ping` - Проверить задержку бота\n"
-                  "* `/balance` - Топ по балансу\n"
-                  "* `/transfer` - Перевести деньги другому пользователю\n"
                   "* `/profile` - Посмотреть профиль\n"
-                  "* `/rank` - Уровень и XP\n"
-                  "* `/leaderboard` - Топ по уровням\n"
-                  "* `/daily` - Ежедневный бонус",
+                  "* `/rank` - Уровень и XP",
             inline=False
         )
 
         embed.add_field(
-            name="Игры",
-            value="* `/coinflip <сумма>` - Подбросить монетку (x1.8)\n"
-                  "* `/dice <сумма>` - Кости (x2)\n"
-                  "* `/duel @user <сумма>` - Дуэль с игроком",
-            inline=False
-        )
-
-        embed.add_field(
-            name="Магазин",
-            value="* `/shop` - Магазин предметов\n"
-                  "* `/buy <id>` - Купить предмет\n"
-                  "* `/inventory` - Инвентарь\n"
-                  "* `/equip <id>` - Экипировать предмет",
+            name="Топ участников",
+            value="* `/voice` - Топ по времени в войсе\n"
+                  "* `/messages` - Топ по сообщениям\n"
+                  "* `/level` - Топ по уровням\n"
+                  "* `/leaderboard` - Топ по уровням",
             inline=False
         )
 
@@ -70,6 +58,7 @@ class GlobalCommands(app_commands.Group):
         )
 
         role_level = admin_handler.get_role_level(interaction.user)
+        is_owner = interaction.user.id == int(self.config.ADMIN_USER_ID)
 
         if role_level <= 1:
             admin_commands = [
@@ -77,22 +66,37 @@ class GlobalCommands(app_commands.Group):
                 "* `/kick` - Кикнуть пользователя",
                 "* `/mute` - Замьютить пользователя",
             ]
-            if interaction.user.id == int(self.config.ADMIN_USER_ID):
+            if is_owner:
                 admin_commands.extend([
-                    "* `/give` - Выдать деньги пользователю",
-                    "* `/rem` - Снять деньги у пользователя",
-                    "* `/economy_reset` - Сбросить баланс",
-                    "* `/shop_add` - Добавить предмет в магазин",
-                    "* `/shop_remove` - Удалить предмет из магазина",
-                    "* `/twitch add/remove/list` - Twitch стримеры",
-                    "* `/logs channel` - Канал для логов",
-                    "* `/verify setup` - Настроить верификацию",
+                    "* `/send_rules` - Отправить правила сервера",
+                    "* `/verify_setup` - Настроить верификацию",
+                    "* `/verify_edit` - Редактировать верификацию",
+                    "* `/suggest_setup` - Настроить систему предложений",
+                    "* `/logs` - Канал для логов",
                 ])
             embed.add_field(
                 name="Команды администратора",
                 value="\n".join(admin_commands),
                 inline=False
             )
+
+            if is_owner:
+                twitch_commands = [
+                    "* `/twitch_add` - Добавить стримера",
+                    "* `/twitch_remove` - Удалить стримера",
+                    "* `/twitch_list` - Список стримеров",
+                    "* `/twitch_channel` - Канал для уведомлений",
+                    "* `/twitch_pingrole` - Роль для пинга",
+                    "* `/drops_add` - Добавить игру для дропсов",
+                    "* `/drops_remove` - Убрать игру из дропсов",
+                    "* `/drops_channel` - Канал для дропсов",
+                ]
+                embed.add_field(
+                    name="Twitch",
+                    value="\n".join(twitch_commands),
+                    inline=False
+                )
+
         elif role_level <= 3:
             embed.add_field(
                 name="Команды модератора",
